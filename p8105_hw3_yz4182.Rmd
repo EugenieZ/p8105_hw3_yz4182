@@ -1,5 +1,5 @@
 ---
-title: "p8105_hw3_yz4182"
+title: "Data Science Homework 3"
 author: "Yujin Zhang"
 date: "10/17/2021"
 output: github_document
@@ -10,29 +10,74 @@ library(tidyverse)
 library(httr)
 library(jsonlite)
 
+knitr::opts_chunk$set(
+  warning = FALSE,
+  fig.width = 8,
+  fig.height = 6, 
+  out.width = "90%"
+)
 ```
 
-## Data Science Homework 3
+## This is a R Markdown document for Data Science Homework 3.
 
 Problem 1
 
 The goal is to do some exploration of this dataset. To that end, write a short description of the dataset, noting the size and structure of the data, describing some key variables, and giving illstrative examples of observations.
-
-1. How many aisles are there, and which aisles are the most items ordered from?
 ```{r}
 # load the dataset
 library(p8105.datasets)
 data("instacart")
 
+head(instacart, 4)
+```
+Description:
+
+The dataset includes 15 variables and 1384617 observations. The above table shows the example rows of this dataset, where each row in the dataset is a product from an order. The meaning of every variable is:
+
+order_id: order identifier
+
+product_id: product identifier
+
+add_to_cart_order: order in which each product was added to cart
+
+reordered: 1 if this prodcut has been ordered by this user in the past, 0 otherwise
+
+user_id: customer identifier
+
+eval_set: which evaluation set this order belongs in (Note that the data for use in this class is exclusively from the “train” eval_set)
+
+order_number: the order sequence number for this user (1=first, n=nth)
+
+order_dow: the day of the week on which the order was placed
+
+order_hour_of_day: the hour of the day on which the order was placed
+
+days_since_prior_order: days since the last order, capped at 30, NA if order_number=1
+
+product_name: name of the product
+
+aisle_id: aisle identifier
+
+department_id: department identifier
+
+aisle: the name of the aisle
+
+department: the name of the department
+
+
+1. How many aisles are there, and which aisles are the most items ordered from?
+```{r}
 # count the number of aisles
 count_aisle = 
   instacart %>% 
   group_by(aisle) %>%
   count(name = "n_obs") %>% 
-  arrange(n_obs)
+  arrange(desc(n_obs))
+  
+head(count_aisle, 2)
 ```
 
-For this question, the amount of aisles is 134, and fresh vegetables are the most items ordered from.
+For this question, the amount of aisles was 134, and "fresh vegetables" was the most items ordered from.
 
 2. Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. 
 ```{r}
@@ -46,9 +91,12 @@ count_filter =
 
 # make a plot to show the number of items ordered in each aisle  
 ggplot(count_filter, aes(x = reorder(aisle, n_obs), y = n_obs)) +
-  geom_bar(stat = "identity") +
-  labs(title = "bar diagram for number of items ordered in each aisle", x = "name of aisles", y = "count")
+  geom_bar(aes(fill = aisle), stat = "identity") +
+  labs(title = "bar diagram for number of items ordered in each aisle", x = "name of aisles", y = "count") +
+  scale_x_discrete(labels = NULL)
 ```
+
+The bar diagram above showed the number of items ordered in aisles, which had more than 10000 items ordered. 
 
 3. Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
 ```{r}
@@ -60,11 +108,12 @@ join_most3popular =
   count(name = "counts") %>% 
   group_by(aisle) %>% 
   mutate(rank =  order(order(counts, decreasing = TRUE))) %>% # add a variable which shows rank of each product
-  filter(rank < 4) %>% 
-  arrange(aisle, rank) %>% 
-  knitr::kable()
+  filter(rank < 4) %>% # find the three most popular items
+  arrange(aisle)
+  
 
 ```
+`r knitr::kable(join_most3popular)`
 
 4. Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week
 ```{r}
@@ -86,9 +135,10 @@ order_hour =
   pivot_wider(
     names_from = "order_dow",
     values_from = "mean_hour"
-  ) %>% # format a readable table 
-  knitr::kable()
+  )  # format a readable table 
+  
 ```
+`r knitr::kable(order_hour)`
 
 ## Problem 2
 
@@ -128,7 +178,7 @@ focus on the “Overall Health” topic;
 include only responses from “Excellent” to “Poor”;
 organize responses as a factor taking levels ordered from “Poor” to “Excellent”;
 
-```{r, message=FALSE}
+```{r}
 data_brfss_smart2010 =
   brfss_smart2010 %>% 
   janitor::clean_names() %>% 
@@ -140,36 +190,42 @@ data_brfss_smart2010 =
   mutate(data_value = as.numeric(data_value)) %>% 
   arrange(year) %>% 
   select(-location_abbr)
+
+# show the data frame
+data_brfss_smart2010
 ```
+
 
 2. Answer the question: In 2002, which states were observed at 7 or more locations? What about in 2010?
 ```{r}
 more_than_7locations =
   data_brfss_smart2010 %>% 
   group_by(year, state) %>%
+  distinct(location) %>% 
   count(name = "count") %>% 
-  filter(year %in% c("2002", "2010") & count >= 7) %>% 
-  knitr::kable()
-```
-In 2002, FL, MA, MD, NJ, NY, PA were observed at 7 or more locations.
+  filter(year %in% c("2002", "2010") & count >= 7)
 
-In 2010, CA, FL, MA, MD, ME, MI, NC, NE, NJ, PA, TX, UT, WA were observed at 7 or more locations.
+```
+`r knitr::kable(more_than_7locations)`
+In 2002, CT, FL, MA, NJ, NC, PA were observed at 7 or more locations.
+
+In 2010, CA, CO, FL, MA, MD, NC, NE, NJ, NY, OH, PA, SC, TX, WA were observed at 7 or more locations.
 
 
 
 3. Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state. Make a “spaghetti” plot of this average value over time within a state 
 
-```{r}
+```{r, message=FALSE}
 # filter the excellent rows and calculate the mean
 excellent_responses =
   data_brfss_smart2010 %>% 
   filter(response == "Excellent") %>%
   select(year, state, response, data_value) %>%
-  mutate(data_value = as.numeric(data_value)) %>% 
   group_by(state, year) %>% 
-  summarise(mean(data_value, na.rm = TRUE)) %>% 
+  summarise(mean(data_value, na.rm = TRUE)) %>% # ignore the missing data when calculating
   rename("averages_data_value" = "mean(data_value, na.rm = TRUE)") %>% 
   arrange(year)
+
 
 # make the plot
 excellent_responses %>% 
@@ -190,12 +246,12 @@ NY_state_df =
 NY_state_df %>% 
   group_by(response) %>% 
   ggplot(aes(x = data_value, fill = response)) +
-  geom_density(alpha = .5, adjust = .5) +
+  geom_density(alpha = .5, adjust = .5, color = "blue") +
   labs(
     title = "Two-Panel Plot for Responses in NY State in 2006 and 2010",
     x = "Data Value",
     y = "Density") +
-  facet_grid(year ~ response)
+  facet_grid( ~ year)
 ```
 
 ## Problem 3
@@ -238,20 +294,24 @@ total =
   select(-activity_counts, -minutes_order) %>% 
   distinct() %>% 
   arrange(week, day)  
-  
-knitr::kable(total)
+
 ```
+`r knitr::kable(total)`
+
 
 ```{r}
 # to get the trends from the dataset
 total %>% 
-  ggplot(aes(x = day, y = total_count, group = week)) +
-  geom_line(aes(color = week)) +
+  ggplot(aes(x = day_id, y = total_count, group = weekday_vs_weekend)) +
+  geom_point() +
+  geom_line(aes(color = weekday_vs_weekend)) +
   labs(title = "plot for total activity counts in a week", 
        x = "day",
        y = "total count")
 ```
-Trends:
+
+Trends: The total activity counts in every weekend tended to decrease when time went by.
+
 
 3. Accelerometer data allows the inspection activity over the course of the day. Make a single-panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week. Describe in words any patterns or conclusions you can make based on this graph.
 
@@ -262,7 +322,7 @@ accel_df %>%
   arrange(day_id) %>% 
 # make a plot to show 24-hour activity time courses for each day
   ggplot(aes(x = hours_order, y = activity_counts, group = day_id)) +
-  geom_line(aes(color = day_id)) +
+  geom_line(aes(color = day), alpha = .5) +
   labs(title = "plot for 24-hour activity time courses for each day", 
        x = "24-hour of the day",
        y = "activity count") +
@@ -271,7 +331,7 @@ accel_df %>%
     labels = c("0", "4", "8", "12", "16", "20", "24"))
 ```
 
-Conclusion: the plot above shows that this man tended to have more activity counts around 12:00 and between 20:00 and 22:00 in a day. Activity counts were in low status in the evening between 24:00 and 4:00 in a day.
+Conclusion: the plot above showed that this man tended to have more activity counts around 12:00PM, between 8:00PM and 10:00PM in a day. Activity counts were in low status in the evening between 12:00AM and 4:00AM in a day, with a possible reason that he might be sleeping.
 
 
 
