@@ -109,7 +109,16 @@ join_most3popular =
   group_by(aisle) %>% 
   mutate(rank =  order(order(counts, decreasing = TRUE))) %>% # add a variable which shows rank of each product
   filter(rank < 4) %>% # find the three most popular items
-  arrange(aisle)
+  arrange(aisle, rank) %>% 
+  pivot_wider(names_from = "rank", values_from = c("product_name", "counts")) %>% 
+  rename("rank_1_product" = product_name_1,
+         "rank_2_product" = product_name_2,
+         "rank_3_product" = product_name_3,
+         "rank_1_count" = counts_1,
+         "rank_2_count" = counts_2,
+         "rank_3_count" = counts_3) %>% # arrange the table to be more readable
+  select(aisle, rank_1_product, rank_1_count, rank_2_product, rank_2_count, rank_3_product, rank_3_count)
+
   
 
 ```
@@ -281,8 +290,11 @@ accel_df =
   ) %>% 
   mutate(minutes_order = as.numeric(minutes_order)) %>% 
   relocate(week, day_id)
+
+head(accel_df, 4) #show the data frame
 ```
 
+The data frame includes 6 variables: `r names(accel_df)`, and 50400 observations. The example rows are showed above. 
 
 
 2.Traditional analyses of accelerometer data focus on the total activity over the day. Using your tidied dataset, aggregate across minutes to create a total activity variable for each day, and create a table showing these totals. Are any trends apparent?
